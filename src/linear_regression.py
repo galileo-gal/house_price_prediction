@@ -153,3 +153,91 @@ class PolynomialRegressionGradientDescent:
         ss_tot = np.sum((y - np.mean(y)) ** 2)
         return 1 - (ss_res / ss_tot)
 
+
+class RidgeRegressionScratch:
+    """Ridge Regression (L2 regularization) using Normal Equation"""
+
+    def __init__(self, alpha=1.0):
+        self.alpha = alpha
+        self.weights = None
+        self.bias = None
+
+    def fit(self, X, y):
+        m, n = X.shape
+        X_b = np.c_[np.ones((m, 1)), X]
+
+        # Ridge: θ = (X^T X + αI)^-1 X^T y
+        I = np.eye(n + 1)
+        I[0, 0] = 0  # Don't regularize bias
+        theta = np.linalg.inv(X_b.T @ X_b + self.alpha * I) @ X_b.T @ y
+
+        self.bias = theta[0]
+        self.weights = theta[1:]
+        print(f"✓ Ridge trained with alpha={self.alpha}")
+        return self
+
+    def predict(self, X):
+        return X @ self.weights + self.bias
+
+    def score(self, X, y):
+        y_pred = self.predict(X)
+        ss_res = np.sum((y - y_pred) ** 2)
+        ss_tot = np.sum((y - np.mean(y)) ** 2)
+        return 1 - (ss_res / ss_tot)
+
+
+class LassoRegressionScratch:
+    """Lasso Regression (L1 regularization) using Coordinate Descent"""
+
+    def __init__(self, alpha=1.0, n_iterations=1000, tol=1e-4):
+        self.alpha = alpha
+        self.n_iterations = n_iterations
+        self.tol = tol
+        self.weights = None
+        self.bias = None
+
+    def _soft_threshold(self, rho, lambda_):
+        """Soft thresholding operator for L1"""
+        if rho < -lambda_:
+            return rho + lambda_
+        elif rho > lambda_:
+            return rho - lambda_
+        else:
+            return 0
+
+    def fit(self, X, y):
+        m, n = X.shape
+        self.weights = np.zeros(n)
+        self.bias = np.mean(y)
+
+        # Coordinate descent
+        for iteration in range(self.n_iterations):
+            weights_old = self.weights.copy()
+
+            for j in range(n):
+                # Compute residual without feature j
+                residual = y - (X @ self.weights + self.bias) + X[:, j] * self.weights[j]
+
+                # Update weight j
+                rho = np.dot(X[:, j], residual) / m
+                self.weights[j] = self._soft_threshold(rho, self.alpha / m)
+
+            # Update bias
+            self.bias = np.mean(y - X @ self.weights)
+
+            # Check convergence
+            if np.sum(np.abs(self.weights - weights_old)) < self.tol:
+                print(f"✓ Converged at iteration {iteration + 1}")
+                break
+
+        print(f"✓ Lasso trained with alpha={self.alpha}")
+        return self
+
+    def predict(self, X):
+        return X @ self.weights + self.bias
+
+    def score(self, X, y):
+        y_pred = self.predict(X)
+        ss_res = np.sum((y - y_pred) ** 2)
+        ss_tot = np.sum((y - np.mean(y)) ** 2)
+        return 1 - (ss_res / ss_tot)
