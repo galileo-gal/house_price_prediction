@@ -610,9 +610,186 @@ Feature Weights:
 - `notebooks/01_eda.ipynb` (added Day 7 analysis)
 - `src/feature_engineering.py` (NEW - feature engineering functions)
 
+
+---
+## Day 8: Elastic Net & Advanced Regularization
+**Date**: January 15, 2026
+
+### Tasks Completed
+- ✅ Implemented ElasticNetScratch (L1 + L2 regularization)
+- ✅ Tested l1_ratio: 0.0 to 1.0 (Ridge → Lasso spectrum)
+- ✅ Tested alpha: 0.001 to 1.0
+- ✅ Grid search on 15 engineered features
+
+### Results
+- All configurations: Val R² ≈ 0.8479
+- No improvement over base linear model
+- Elastic Net unable to handle multicollinearity better than feature removal
+
+### Key Finding
+**Elastic Net unnecessary** - no overfitting exists in base model. Feature removal remains superior approach to handling multicollinearity.
+
 ---
 
-**Last Updated**: January 14, 2026
+## Day 9: Tree-Based Models & Hyperparameter Tuning
+**Date**: January 15, 2026
+
+### Tasks Completed
+- ✅ Trained Random Forest (grid search: 72 configs)
+- ✅ Trained XGBoost (grid search: optimized params)
+- ✅ Compared against linear baseline
+
+### Results
+| Model | Test R² | Overfit | Status |
+|-------|---------|---------|--------|
+| Random Forest | 0.8594 | 0.0785 | ❌ Eliminated |
+| XGBoost | 0.8740 | 0.0063 | 🥇 New Champion |
+| Linear | 0.8718 | 0.0271 | 🥈 Silver |
+
+### XGBoost Breakthrough
+- **Best params**: n_estimators=300, max_depth=4, lr=0.05, subsample=0.8
+- **Fixes linear's failures**: 7 houses where linear failed by 20%+
+- **Feature importance**: OverallQual dominates (49%)
+- **Captures non-linearity**: Price discontinuities at market segments
+
+### Why XGBoost Won
+- Better regularization (0.63% overfit vs RF's 7.85%)
+- Gradient boosting > bagging for this dataset
+- Handles outliers without overfitting
+
+
+---
+
+
+## Day 10: Ensemble Stacking & Production Calibration
+**Date**: January 15, 2026
+
+### Part 1: Ensemble Stacking (2 hours)
+
+#### Architecture
+- Base Model 1: Linear Regression (6 features)
+- Base Model 2: XGBoost (300 estimators)
+- Meta-Model: Ridge(α=0.1) blending predictions
+
+#### Blending Weights
+- Linear: 0.4123 (41%)
+- XGBoost: 0.6593 (66%)
+- Bias: -0.8738
+
+#### Results
+**Test R²: 0.8833** 🏆 NEW CHAMPION
+- Beats XGBoost by +0.0093
+- Beats Linear by +0.0115
+- RMSE: 0.1416, MAE: 0.0979
+
+#### Victory Analysis
+- Ensemble wins on 30.8% of houses (45/146)
+- Strategic wins on high-variance outliers
+- Averages out extreme errors from both models
+
+---
+
+### Part 2: Confidence Calibration (3 hours)
+
+#### Problem
+Initial confidence intervals: 52.7% coverage (too low)
+
+#### Solution: Data-Driven Calibration
+Used actual disagreement distribution and residuals to set thresholds:
+
+**Calibrated Thresholds:**
+- High confidence: disagreement < 0.0228 (25th percentile)
+- Medium: 0.0228 - 0.0673 (25th-75th)
+- Low: > 0.0673 (75th+)
+
+**Calibrated Margins:**
+- High: ±0.1416 (covers 80% of errors)
+- Medium: ±0.2219 (covers 90%)
+- Low: ±0.3057 (covers 95%)
+
+#### Final Coverage: 88.4% ✅
+Meets industry standard (>85%)
+
+**Distribution:**
+- High confidence: 25.3% of predictions
+- Medium: 49.3%
+- Low: 25.3%
+
+### Day 10 Summary
+
+#### Key Achievements
+1. ✅ Ensemble stacking: +0.93% over XGBoost
+2. ✅ Calibrated confidence system (88.4% coverage)
+3. ✅ Production-ready model saved to disk
+4. ✅ Honest uncertainty quantification
+
+#### System Design Insight
+**Avoided switching models based on uncertainty** - ensemble already encodes this mathematically. Instead, used disagreement for confidence scoring (user-facing transparency).
+
+#### Final Model Card
+- Architecture: Linear + XGBoost → Ridge meta-learner
+- Performance: 0.8833 R² (88.3% variance explained)
+- Calibration: 88.4% of predictions fall within stated intervals
+- Deployment ready: Serialized with preprocessing pipeline
+
+
+
+---
+
+### Part 3: Model Serialization
+
+#### Saved Artifacts
+- `models/ensemble_production_v1.pkl` (main)
+- `models/linear_model.pkl`
+- `models/xgboost_model.pkl`
+
+#### Production Model Specs
+##### Final Ensemble Model v1.0
+- `Test R²: 0.8833`
+- `Coverage: 88.4%`
+- `Confidence system: 3 levels (high/med/low)`
+- `Features: 6 (OverallQual, GrLivArea, GarageCars, TotalBsmtSF, 1stFlrSF, YearBuilt)`
+
+
+## Summary: Days 1-10 - PROJECT COMPLETE
+
+### Champion Model: Ensemble (Linear + XGBoost)
+#### Final Performance:
+- **Test R²:**    0.8833 🏆
+- **RMSE:**       0.1416 (log scale)
+- **MAE:**        0.0979 (log scale)
+- **Coverage:**   88.4%
+- **Features:**   6
+
+
+### Evolution Timeline
+| Day | Model | Test R² | Delta |
+|-----|-------|---------|-------|
+| 3-6 | Linear (from scratch) | 0.8718 | baseline |
+| 9 | XGBoost | 0.8740 | +0.0022 |
+| 10 | Ensemble + Calibration | 0.8833 | +0.0115 |
+
+### Project Achievements
+1. ✅ Built 6 ML algorithms from scratch (all matched sklearn)
+2. ✅ Comprehensive validation (train/val/test + CV)
+3. ✅ Advanced ensemble stacking
+4. ✅ Production-ready confidence system (88.4% coverage)
+5. ✅ Model serialization & deployment prep
+
+### Key Learnings - Full Journey
+1. **Linear strong baseline**: 87% performance, interpretable
+2. **Tree models handle outliers**: XGBoost +0.2% over linear
+3. **Ensemble strategic**: Wins on high-variance cases (30.8%)
+4. **Calibration critical**: Coverage jumped 52% → 88%
+5. **System design > algorithms**: Confidence scoring beats model switching
+ 
+---
+
+
+
+
+
+**Last Updated**: January 15, 2026
 **Status**: Days 1-7 Complete ✅ | Ready for Days 7-14
 **Next Milestone**: Medium Article + Code Documentation
 

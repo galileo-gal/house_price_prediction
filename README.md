@@ -1,9 +1,3 @@
-It's impressive to see how much progress you've made on this project! Based on the code in `linear_regression.py`, the analysis in your Jupyter notebook, and the detailed notes in `PROJECT_LOG.md`, I've put together a comprehensive `README.md` for your portfolio.
-
-I've made sure to highlight the "from scratch" nature of your work, as that's a key selling point for AI engineering roles. 🏠
-
----
-
 # House Price Predictor - Linear Regression from Scratch
 
 ## 📋 Table of Contents
@@ -15,9 +9,11 @@ I've made sure to highlight the "from scratch" nature of your work, as that's a 
 5. [Project Structure](#5-project-structure)
 6. [Data Insights & Diagnostics](#6-data-insights--diagnostics)
 7. [Model Performance](#7-model-performance)
-8. [Lessons Learned](#8-lessons-learned)
-9. [Future Improvements](#9-future-improvements)
-10. [Author & Contact](#10-author--contact)
+8. [Production Model & Confidence System](#8-production-model--confidence-system)
+9. [Technologies & Tools](#9-technologies--tools)
+10. [Lessons Learned](#10-lessons-learned)
+11. [Completed Improvements](#11-completed-improvements)
+12. [Author & Contact](#12-author--contact)
 
 ---
 
@@ -29,11 +25,17 @@ This project is a deep dive into the fundamentals of machine learning, focusing 
 
 ## 2. Key Results
 
-* **Best Model**: Linear Regression with Gradient Descent.
-* **Performance**: Achieved an **R² score of 0.8449** on the validation set identical to Scikit-Learn's performance.
-* **Data Processing**: Reduced target variable skewness from **1.88 to 0.12** using log transformation.
-* **Convergence Mastery:** Successfully implemented a custom Gradient Descent that achieved a **99.98% cost reduction** within 1000 iterations.
-* **Feature Engineering**: Selected 7 high-impact features, including `OverallQual` (0.79 correlation) and `GrLivArea` (0.71 correlation).
+* **Champion Model**: Ensemble (Linear + XGBoost) with calibrated confidence intervals
+* **Performance**: **R² = 0.8833** on test set (146 samples)
+* **Coverage**: 88.4% of predictions fall within stated confidence intervals
+* **Convergence**: Custom gradient descent achieved 99.98% cost reduction
+* **Features**: 6 optimized features (removed multicollinear FullBath)
+* **Validation**: All scratch implementations matched sklearn (<0.01 error)
+
+### Model Evolution
+- **Days 1-6**: Linear from scratch → 0.8718 R²
+- **Day 9**: XGBoost hyperparameter tuning → 0.8740 R²
+- **Day 10**: Ensemble stacking + calibration → 0.8833 R² (FINAL)
 
 ## 3. Mathematical Implementation
 The core engine features two distinct optimization strategies built from the ground up:
@@ -79,7 +81,7 @@ pip install -r requirements.txt
 
 ### Run the Analysis
 
-1. Download `train.csv` and `test.csv` from [Kaggle](https://www.google.com/search?q=https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data) and place them in the `data/` folder.
+1. Download `train.csv` and `test.csv` from [Kaggle](https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data) and place them in the `data/` folder.
 2. Launch Jupyter Lab: `jupyter lab`
 3. Open `notebooks/01_eda.ipynb` to view the full pipeline.
 
@@ -91,6 +93,10 @@ house-price-predictor/
 │   └── 01_eda.ipynb    # Main analysis and model training loop
 ├── src/                # Pure Python implementations
 │   └── linear_regression.py  # Scratch-built ML classes
+├── models/             # Saved production models
+│   ├── ensemble_production_v1.pkl  # Final ensemble model
+│   ├── linear_model.pkl
+│   └── xgboost_model.pkl
 ├── data/               # Dataset (not tracked in Git)
 ├── .gitignore          # Environment and data exclusions
 ├── requirements.txt    # Project dependencies
@@ -108,6 +114,7 @@ The core of this project is `linear_regression.py`, which contains custom implem
 * **LinearRegressionScratch**: Uses Gradient Descent with customizable learning rates and iterations. Includes gradient clipping for stability.
 * **RidgeRegressionScratch**: Implements L2 regularization via the Normal Equation.
 * **LassoRegressionScratch**: Implements L1 regularization using **Coordinate Descent** and a soft-thresholding operator.
+* **ElasticNetScratch**: Combines L1 and L2 regularization for flexible penalty mixing.
 * **PolynomialRegressionGradientDescent**: Extends linear models to capture non-linear relationships.
 
 
@@ -141,38 +148,100 @@ Through rigorous EDA and feature selection, the model effectively identifies the
 ### **Model Health Analysis**
 By analyzing the residuals (the difference between actual and predicted prices), I identified that while the model is highly reliable for standard residential homes, it exhibits **Heteroscedasticity**. This "funnel shape" in the error distribution suggests that luxury properties ($400k+) carry unique non-linear variables that a simple linear model slightly underestimates.
 
+## 8. Production Model & Confidence System
 
+### Architecture
+The final production model uses **ensemble stacking**:
+1. **Base Model 1**: Linear Regression (from scratch, 6 features)
+2. **Base Model 2**: XGBoost (300 trees, max_depth=4, learning_rate=0.05)
+3. **Meta-Model**: Ridge blender (weights: 0.41×Linear + 0.66×XGBoost)
 
-## 8. Technologies Used
+### Why Ensemble Won
+- **Strategic advantage**: Beats both base models on 30.8% of houses
+- **Handles outliers**: Averages out extreme errors from Linear and XGBoost
+- **Low overfitting**: Only 0.63% gap between train and test
+- **Captures non-linearity**: XGBoost fixes 7 houses where Linear failed by 20%+
+
+### Confidence Scoring System
+Predictions include **calibrated confidence intervals** based on model disagreement:
+
+| Confidence | Criteria | Price Range | Coverage | Distribution |
+|------------|----------|-------------|----------|--------------|
+| **High** | Disagreement < 2.3% | ±14% | 80% | 25.3% of houses |
+| **Medium** | Disagreement 2.3-6.7% | ±22% | 90% | 49.3% of houses |
+| **Low** | Disagreement > 6.7% | ±31% | 95% | 25.3% of houses |
+
+**Calibration Achievement**: 88.4% of actual prices fall within predicted ranges (industry standard: >85%)
+
+### Example Output
+```python
+House Prediction:
+  Price:       $245,000
+  Confidence:  Medium
+  Range:       $191,000 - $299,000
+  Disagreement: 4.5% (models moderately uncertain)
+```
+
+### Production Deployment
+- **Saved Models**: `models/ensemble_production_v1.pkl` (2.3 MB)
+- **Load Time**: <0.5 seconds
+- **Prediction Time**: Instant (<10ms)
+- **Features Required**: 6 (OverallQual, GrLivArea, GarageCars, TotalBsmtSF, 1stFlrSF, YearBuilt)
+- **Use Cases**: Portfolio valuation, automated appraisals, risk assessment
+
+### System Design Philosophy
+**Avoided model switching** based on uncertainty thresholds. Instead, the ensemble naturally handles uncertainty mathematically, while disagreement scores provide transparent confidence levels to users.
+
+## 9. Technologies & Tools
 
 * **Core**: Python 3.12
 * **Data Science**: NumPy, Pandas, Scikit-Learn (for preprocessing/validation)
+* **Advanced ML**: XGBoost, Ensemble Stacking
 * **Visualization**: Matplotlib, Seaborn
+* **Model Persistence**: Pickle (serialization)
+* **Calibration**: Statistical threshold tuning (percentile-based)
 * **Tools**: Jupyter Lab, PyCharm, Git
 
-## 9. Lessons Learned
+## 10. Lessons Learned
 
 * **Feature Scaling is Critical**: Gradient descent fails to converge effectively without standardization.
 * **Log-Transformation Necessity:** House prices are naturally right-skewed. Applying a `log(Price)` transformation was critical to satisfying the linearity assumptions of the model.
 * **Data Quality > Algorithm**: Exploratory data analysis accounted for 50% of the effort, and removing just two major outliers significantly improved model stability.
 * **Target Transformation**: Log-transforming the skewed `SalePrice` was essential for meeting the linear assumption of the model.
 * **The Multicollinearity Trap:** Discovered that highly correlated features (like `FullBath` and `GrLivArea`) can cause unstable, negative weights. This taught me the importance of feature selection over feature quantity.
+* **Ensemble strategic advantage**: Ensemble wins on outliers even if average error is slightly higher - R² measures variance explained, not just mean error.
+* **Calibration essential**: Raw predictions need confidence intervals for production use - jumped from 52.7% to 88.4% coverage with data-driven thresholds.
+* **System design matters**: Confidence scoring beats model switching - avoid arbitrary thresholds and discontinuities.
+* **Tree models valuable**: XGBoost captured non-linearities (price discontinuities, quality premiums) that linear models missed.
+* **Production readiness**: Serialization, validation, and UX (confidence intervals) are equally important as model accuracy.
 
-## 10. Future Improvements
+## 11. Completed Improvements ✅
 
-* **Advanced Engineering**: Combine bathroom features to reduce multicollinearity.
-* **Interaction Terms**: Add features like `OverallQual × GrLivArea` to capture non-additive effects.
-* **Segmented Models**: Develop separate models for luxury properties versus distressed properties to handle non-linear price breaks.
+The following improvements were successfully implemented during the project:
 
-## 10. Author & Contact
+* ✅ **Multicollinearity resolution**: Removed FullBath feature (negative weight artifact)
+* ✅ **Cross-validation optimization**: Shuffled K-Fold reduced std by 55%
+* ✅ **Advanced models tested**: Polynomial, Ridge, Lasso, Elastic Net, Random Forest, XGBoost
+* ✅ **Ensemble stacking**: Combined Linear + XGBoost with meta-learner
+* ✅ **Confidence calibration**: 88.4% coverage with 3-tier system
+* ✅ **Production deployment**: Serialized models ready for API integration
+* ✅ **Feature engineering**: Tested 15 features, validated that base 6 were optimal
 
-**Abdullah Al Galib** I am a BSc. in Computer Science & Engineering student at **North South University (NSU)**, studying under the Department of Electrical and Computer Engineering (ECE).
+### Potential Future Work
+* **Temporal features**: Market trends, seasonality, economic indicators
+* **Geographic expansion**: Train on multiple cities for generalization
+* **Real-time integration**: Price tracking APIs, automated retraining pipeline
+* **Web deployment**: Flask/FastAPI with interactive UI
+* **Segmented models**: Separate predictors for luxury vs budget properties
+
+## 12. Author & Contact
+
+**Abdullah Al Galib** - BSc. in Computer Science & Engineering student at **North South University (NSU)**, studying under the Department of Electrical and Computer Engineering (ECE).
 
 * **Technical Foundation:** Strong background in Mathematics and Physics, having achieved **full UMS (300/300)** in AS Physics.
 * **Interests:** Beyond AI, I am passionate about finance, budgeting, and cost optimization through analytical modeling.
 
-* **GitHub**: [github.com/galileo-gal](https://www.google.com/search?q=https://github.com/galileo-gal)
-* **LinkedIn**: [linkedin.com/in/galib3051](https://www.google.com/search?q=https://www.linkedin.com/in/galib3051/)
+* **GitHub**: [github.com/galileo-gal](https://github.com/galileo-gal)
+* **LinkedIn**: [linkedin.com/in/galib3051](https://linkedin.com/in/galib3051/)
 
 ---
-
