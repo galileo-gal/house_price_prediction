@@ -1,5 +1,12 @@
 # House Price Predictor - Linear Regression from Scratch
 
+
+![Python](https://img.shields.io/badge/Python-3.12-blue)
+![ML](https://img.shields.io/badge/ML-From%20Scratch-green)
+![R²](https://img.shields.io/badge/R²-0.8833-brightgreen)
+![Status](https://img.shields.io/badge/Status-Complete-success)
+
+
 ## 📋 Table of Contents
 
 1. [Project Overview](#1-project-overview)
@@ -33,6 +40,7 @@ This project is a deep dive into the fundamentals of machine learning, focusing 
 * **Validation**: All scratch implementations matched sklearn (<0.01 error)
 
 ### Model Evolution
+![Model Evolution](images/model_evolution.png)
 - **Days 1-6**: Linear from scratch → 0.8718 R²
 - **Day 9**: XGBoost hyperparameter tuning → 0.8740 R²
 - **Day 10**: Ensemble stacking + calibration → 0.8833 R² (FINAL)
@@ -118,7 +126,7 @@ house-price-predictor/
 
 ## 6. Implementation Details
 
-
+![Feature Importance](images/feature_importance.png)
 
 
 The core of this project is `linear_regression.py`, which contains custom implementations of:
@@ -151,6 +159,8 @@ A key value of this "from scratch" approach is interpretability. Based on the mo
 
 Through rigorous EDA and feature selection, the model effectively identifies the primary drivers of house value.
 
+![Predictions vs Actual](images/predictions_vs_actual.png)
+
 * **Validation Split**: 75% Train / 15% Val / 10% Test.
 * **Strengths**: Strong performance on average-to-high value homes.
 * **Limitations**:
@@ -182,6 +192,8 @@ Predictions include **calibrated confidence intervals** based on model disagreem
 | **High** | Disagreement < 2.3% | ±14% | 80% | 25.3% of houses |
 | **Medium** | Disagreement 2.3-6.7% | ±22% | 90% | 49.3% of houses |
 | **Low** | Disagreement > 6.7% | ±31% | 95% | 25.3% of houses |
+
+![Confidence System](images/confidence_system.png)
 
 **Calibration Achievement**: 88.4% of actual prices fall within predicted ranges (industry standard: >85%)
 
